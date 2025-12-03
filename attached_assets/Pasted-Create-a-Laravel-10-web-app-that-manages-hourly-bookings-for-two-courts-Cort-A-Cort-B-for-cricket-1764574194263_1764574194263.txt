@@ -1,0 +1,285 @@
+Create a Laravel 10 web app that manages hourly bookings for two courts (Cort A, Cort B) for cricket and football, shows available slots for a selected day, and includes an admin dashboard with booking creation (form: name, phone, amount) and graphs on the home page.
+
+Requirements & behavior (high-level)
+
+Two courts: Court A and Court B (storeable/configurable).
+
+Two sports:
+
+Cricket — 2000 per hour per court.
+
+Football — 2500 per hour per court.
+
+Working hours configurable (default 06:00 — 23:00). Slots are hourly (06:00–07:00, 07:00–08:00, …).
+
+Dynamic daily availability: show each hourly slot for the requested date and court(s) marked Available or Booked.
+
+Prevent double-booking (no overlapping bookings for same court & hour).
+
+Booking form fields: name, phone_number, sport, court, date, start_time, hours (number of hours), and amount (auto-calculated).
+
+Admin dashboard (authenticated) to:
+
+Create, list, edit, cancel bookings.
+
+See key metrics and graphs on the homepage (revenue today/week/month, bookings count, busiest court, occupancy %).
+
+Use Blade + Tailwind CSS for UI.
+
+Use Chart.js for charts and DataTables (or similar) for listing bookings with AJAX.
+
+Use Axios for AJAX requests.
+
+Provide migrations, seeders (sample courts, sample bookings), factories, and tests (unit for booking logic + feature tests for booking creation & double-book prevention).
+
+Provide detailed README with run instructions (Replit-ready).
+
+Tech stack & libraries (explicit)
+
+Laravel 10 (or latest stable)
+
+PHP 8.1+
+
+MySQL (or SQLite for Replit convenience)
+
+Composer, NPM/Vite
+
+Tailwind CSS
+
+Chart.js (for charts)
+
+DataTables OR Tabulator (for bookings table)
+
+Axios (AJAX)
+
+Laravel Breeze (simple auth) or Jetstream (Breeze preferred for simplicity)
+
+Pest or PHPUnit for tests
+
+Data model (suggested schema)
+
+courts
+
+id (pk)
+
+name (string) — Court A, Court B
+
+created_at, updated_at
+
+sports
+
+id (pk)
+
+name (string) — Cricket, Football
+
+price_per_hour (integer)
+
+created_at, updated_at
+
+bookings
+
+id (pk)
+
+uuid (string) — public booking id
+
+name (string)
+
+phone (string)
+
+sport_id (fk -> sports)
+
+court_id (fk -> courts)
+
+date (date) — booking date
+
+start_time (time) — slot start (HH:MM:SS)
+
+hours (integer) — how many hours
+
+amount (integer) — calculated price (hours * price_per_hour)
+
+status (enum) — booked, cancelled, completed
+
+created_at, updated_at
+
+settings (optional)
+
+id
+
+key
+
+value
+
+Business logic (detailed)
+
+Slot generation: For a given date and court, generate hourly slots between opening_time and closing_time (configurable). Each slot is a start_time (e.g. 09:00) and duration 1 hour. Multi-hour booking occupies consecutive hourly slots.
+
+Availability check when creating a booking: for the requested court and date, ensure none of the requested hourly slots overlap with existing bookings with status booked. If overlap — return validation error.
+
+Auto-calc amount = hours * sport.price_per_hour. Show on frontend dynamically as sport/hours change.
+
+If booking crosses midnight or outside working hours — validation error.
+
+Soft-cancel: status = cancelled.
+
+API / Routes (examples)
+
+Web (Blade):
+
+GET / — public homepage with quick booking widget + graphs for admin if logged in.
+
+GET /availablity?date=YYYY-MM-DD&court_id=1&sport_id=1 — returns JSON list of slots with availability (for AJAX).
+
+GET /bookings/create — booking form.
+
+POST /bookings — create booking.
+
+GET /bookings — bookings list (admin) (AJAX DataTable).
+
+GET /dashboard — admin dashboard with charts.
+
+POST /bookings/{booking}/cancel — cancel booking.
+
+API (optional)
+
+GET /api/slots — returns slots and availability for specified date/court/sport.
+
+POST /api/bookings — create booking.
+
+Frontend behavior (UX details)
+
+Availability view: calendar/date-picker -> when date is selected, make AJAX request to /availablity and render hourly slots for both courts side-by-side. Each slot shows time, sport price, and button Book (if available) or Booked.
+
+Booking form: when user clicks Book on a slot, open modal with form prefilled (date, start_time, court, sport). The hours input defaults to 1. Amount displayed and recalculated client-side.
+
+Dashboard graphs:
+
+Revenue (line chart) — last 7 days.
+
+Bookings count (bar chart) — bookings per day/week.
+
+Occupancy pie/doughnut — percentage of booked slots per court.
+
+Table: recent bookings with filters (date range, court, sport, status).
+
+Validation messages: friendly messages when slot already taken, invalid phone, or outside hours.
+
+Security & validation
+
+Use Laravel validation rules for required fields.
+
+Validate phone number format (E.164 optional) or at least regex:/^[0-9\-\+ ]{7,20}$/.
+
+CSRF protection on forms.
+
+Auth-protected admin routes (use Breeze to scaffold).
+
+Tests (what to include)
+
+Unit test for Booking::isAvailable($court_id, $date, $start_time, $hours) that checks overlapping and non-overlapping cases.
+
+Feature test for creating booking (success) and feature test for creating overlapping booking (fails).
+
+Optional: integration test for amount calculation.
+
+Seeders & factories
+
+CourtsSeeder: create Court A and Court B.
+
+SportsSeeder: create Cricket (2000) and Football (2500).
+
+BookingsFactory: generate sample bookings for the last week (to populate charts).
+
+File & code structure guidance
+
+app/Models/Booking.php — booking logic + scope for date range and availability checks.
+
+app/Http/Controllers/BookingController.php — create, store, index, cancel.
+
+app/Http/Controllers/DashboardController.php — provide aggregated data endpoints for charts.
+
+resources/views/layouts/app.blade.php — main layout (Tailwind).
+
+resources/js/bookings.js — Axios calls for availability / booking form.
+
+resources/js/dashboard.js — Chart.js initialization and AJAX fetches.
+
+routes/web.php — routes listed above.
+
+database/migrations/* — migrations matching model spec.
+
+database/seeders/* — seeders for courts/sports/bookings.
+
+tests/Feature/BookingTest.php & tests/Unit/BookingTest.php.
+
+Replit-specific & run instructions (put these in README)
+
+Use SQLite in Replit for simplicity. In .env, set DB_CONNECTION=sqlite and create database/database.sqlite file.
+
+Commands to run (Replit run command should run these steps):
+
+composer install
+
+cp .env.example .env
+
+generate app key php artisan key:generate
+
+ensure database/database.sqlite exists: touch database/database.sqlite
+
+php artisan migrate --seed
+
+npm install && npm run dev
+
+Start server: php artisan serve --host=0.0.0.0 --port=3000 (or use Replit run config)
+
+Document how to run tests: php artisan test.
+
+UX copy & small details
+
+Booking confirmation message: “Booking confirmed — Booking ID: {uuid}. Amount: PKR {amount}. We have sent a confirmation SMS (optional).”
+
+Friendly validation messages (e.g., “That slot is already taken — please pick another time or court.”)
+
+Deliverables (what to output)
+
+Ask Replit AI to generate (and commit) the following in the repo:
+
+Full Laravel project scaffolding with the above features implemented.
+
+Migrations, seeders, factories, and sample seed data for courts/sports/bookings.
+
+Blade views: homepage, availability view, booking modal/form, admin dashboard with charts, bookings table.
+
+JS assets: Axios + Chart.js usage + DataTables integration.
+
+Unit/Feature tests for booking logic & routes.
+
+README with exact Replit run instructions (use SQLite) and Postman collection or sample curl commands for API endpoints.
+
+Make sure all code is documented with short comments and follow PSR-12 style.
+
+Example prompt to paste into Replit AI (copy-paste ready)
+
+Build a full Laravel 10 web application implementing an indoor hourly slots booking system with the following requirements:
+
+Two courts ("Court A" and "Court B") and two sports ("Cricket" at 2000 PKR/hr, "Football" at 2500 PKR/hr).
+
+Hourly slots between configurable open/close hours (default 06:00–23:00). Multi-hour bookings allowed.
+
+Prevent double-booking of the same court/time. Validate booking date/time and hours against opening hours.
+
+Booking form collects: name, phone number, sport, court, date, start_time, hours; amount must be auto-calculated and stored.
+
+Admin dashboard with authentication (use Laravel Breeze), bookings table (AJAX + DataTables), and graphs (Chart.js) for revenue, bookings counts, and court occupancy.
+
+Provide API endpoints to fetch daily availability and to create bookings.
+
+Use Blade + Tailwind for frontend; Axios for AJAX.
+
+Include migrations, seeders (courts, sports, sample bookings), tests (unit and feature), and a README with Replit-ready run instructions using SQLite.
+
+Add defensive validation, friendly UX messages, and tests ensuring overlapping bookings are forbidden.
+
+Output a runnable project on Replit with instructions for running migrations/seeding, starting dev server, and running tests.
+
+Follow the data schema and structure described in the prompt, implement booking availability logic on the model or service layer, and generate example seeded bookings to populate the dashboard charts.
